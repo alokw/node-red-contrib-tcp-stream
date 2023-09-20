@@ -1,0 +1,47 @@
+<script type="text/javascript">
+    RED.nodes.registerType('tcp-stream',{
+        category: 'outbox',
+        color: '#FAAE42',
+        defaults: {
+            name: {value:""},
+            delimiter: {value:"0xPX"},
+            host: {value:"10.10.40.11"},
+            port: {value:1400}
+        },
+        inputs: 1,
+        outputs: 2,
+        icon: "bridge-dash.svg",
+        label: function() {
+            return this.name||"tcp-stream";
+        }
+    });
+</script>
+
+<script type="text/html" data-template-name="tcp-stream">
+
+    <div class="form-row">
+        <label for="node-input-name"><i class="fa fa-tag"></i> Name</label>
+        <input type="text" id="node-input-name" placeholder="Name">
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-host"><i class="fa fa-tag"></i> Host</label>
+        <input type="text" id="node-input-host" placeholder="Host">
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-port"><i class="fa fa-tag"></i> Port</label>
+        <input type="text" id="node-input-port" placeholder="Port">
+    </div>
+
+    <div class="form-row">
+        <label for="node-input-delimiter"><i class="fa fa-tag"></i> Delimiter</label>
+        <input type="text" id="node-input-delimiter" placeholder="Delimiter">
+    </div>
+    
+</script>
+
+<script type="text/html" data-help-name="tcp-stream">
+    <p>A simple node that opens a TCP connection and keeps it open for bi-directional, continuous communication.</p>
+    <p>The top output reports the outgoing message sent to the host, and the bottom expects and returns a JSON response from the host.</p>
+</script>

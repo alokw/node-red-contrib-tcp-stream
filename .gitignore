@@ -1,3 +1,5 @@
+packet_captures/
+
 # Logs
 logs
 *.log
