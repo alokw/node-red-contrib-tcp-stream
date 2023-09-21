@@ -47,7 +47,11 @@ module.exports = function(RED) {
             response = data.toString();
 
             try {
-                response_split = response.split(node.delimiter.toString())
+                // the presplit is just to deal with multiple monEvents from pixera
+                // that seem to come in formatted back to back for some reason
+                response_presplit = response.replace(new RegExp('"monEvent"\}\{"entries"', 'g'), '"monEvent"\}0xPX\{"entries"');
+                response_split = response_presplit.split(node.delimiter.toString())
+
                 for (const r of response_split) {
                     if (r != "") {
                         msg.payload.response = JSON.parse(r);
