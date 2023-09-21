@@ -44,12 +44,26 @@ module.exports = function(RED) {
         client.on('data', (data) => {
             msg = {};
             msg.payload = {};
-            response_delimited = data.toString();
-            response = response_delimited.replace(/0xPX/, '');
-            msg.payload.response = JSON.parse(response);
-            msg.payload.host = node.host
-            msg.payload.port = node.port
-            node.send( [null, msg] );
+            response = data.toString();
+
+            try {
+                response_split = response.split(node.delimiter.toString())
+                for (const r of response_split) {
+                    if (r != "") {
+                        msg.payload.response = JSON.parse(r);
+                        msg.payload.host = node.host
+                        msg.payload.port = node.port
+                        node.send( [null, msg] );
+                    }
+                }
+
+            } catch (e) {
+                msg.payload.response = e + " error in response: " + response 
+                msg.payload.host = node.host
+                msg.payload.port = node.port
+                node.send( [null, msg] );
+            }
+
         });
 
         client.on('end', () => {

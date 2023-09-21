@@ -3,7 +3,12 @@ This a very simple node based on the node.js net package that opens a TCP connec
 There is little error checking, and was developed for a specific use case, so feel free to use, but proceed to use with caution.
 
 ## Installation
-npm install node-red-contrib-tcp-stream
+In your node-red user directory, typically ~/.node-red, run:
+npm install <location of node module>
+
+For example, on Mac OS or Linux, if your node is located at ~/dev/node-red-contrib-tcp-stream you would do the following:
+cd ~/.node-red
+npm install ~/dev/node-red-contrib-tcp-stream
 
 ## Configuration
 Host: Specifies the hostname / IP address of which to connect to.
