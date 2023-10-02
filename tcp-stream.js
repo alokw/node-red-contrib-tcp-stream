@@ -7,75 +7,98 @@ module.exports = function(RED) {
         this.port = parseInt(config.port);
         this.host = config.host;
         this.delimiter = config.delimiter;
+        this.status( {fill:"red",shape:"ring",text:"connecting..."} );
         var node = this;
 
-        var client = net.createConnection({ host: node.host, port: node.port }, () => {
-            msg = {}
-            msg.payload = 'connected to ' + String(node.host) + ' on port ' + String(node.port)
-            node.send( [null, msg] );
-            this.status({fill:"green",shape:"dot",text:"connected"});
-        });
 
-
-        node.on('input', function(msg) {
-
-            // append delimiter and remove spaces
-            json = msg.payload + node.delimiter
-            json_spaceless = json.replace(/^\s+|\s+$/g, '');
-            msg.payload = json_spaceless
-
-            // convert to buffer
-            const buff = Buffer.from(msg.payload, "utf-8");
-
-            // setup return info
-            ret = {}
-            ret.payload = {}
-            ret.payload.request = buff
-            ret.payload.host = node.host
-            ret.payload.port = node.port
-            ret.payload.length = json_spaceless.length;
+        try {
             
-            // return stuff accordingly
-            client.write(buff);
-            node.send( [ret, null] );
+            var client = new net.createConnection({ host: node.host, port: node.port })
+                
+                client.on('connect', function() {
+                    msg = {}
+                    msg.payload = 'connected to ' + String(node.host) + ' on port ' + String(node.port)
+                    node.send( [null, msg] );
+                    node.status({fill:"green",shape:"dot",text:"connected"});
+                })
 
-        });
-
-        client.on('data', (data) => {
-            msg = {};
-            msg.payload = {};
-            response = data.toString();
-
-            try {
-                // the presplit is just to deal with multiple monEvents from pixera
-                // that seem to come in formatted back to back for some reason
-                response_presplit = response.replace(new RegExp('"monEvent"\}\{"entries"', 'g'), '"monEvent"\}0xPX\{"entries"');
-                response_split = response_presplit.split(node.delimiter.toString())
-
-                for (const r of response_split) {
-                    if (r != "") {
-                        msg.payload.response = JSON.parse(r);
-                        msg.payload.host = node.host
-                        msg.payload.port = node.port
-                        node.send( [null, msg] );
+                client.on('error', function(err) {
+                    
+                    if (err.code == "ENOTFOUND") {
+                        console.log("error: not found");
+                        node.warn("error: not found")
+                        node.status( {fill:"red",shape:"ring",text:"not found"} );
+                        client.destroy();
+                        return;
+                    } else if (err.code == "ECONNREFUSED") {
+                        console.log("error: connection refused");
+                        node.warn("error: connection refused")
+                        node.status( {fill:"red",shape:"ring",text:"refused"} );
+                        client.destroy();
+                        return;
+                    } else if (err.code == "ETIMEDOUT") {
+                        console.log("error: connection timeout");
+                        node.warn("error: connection timeout")
+                        node.status( {fill:"red",shape:"ring",text:"timeout"} );
+                        client.destroy();
+                        return;
+                    } else {
+                        console.log("error: " + err.code);
+                        node.warn("error: " + err.code)
+                        node.status( {fill:"red",shape:"ring",text:"error"} );
+                        client.destroy();
+                        return;
                     }
-                }
+                })
 
-            } catch (e) {
-                msg.payload.response = e + " error in response: " + response 
-                msg.payload.host = node.host
-                msg.payload.port = node.port
-                node.send( [null, msg] );
-            }
+                client.on('data', function(data) {
+                    msg = {};
+                    msg.payload = {};
 
-        });
+                    let header = node.delimiter;
+                    var receivebuffer = data;
+                    var delimiter_length = header.length;
 
-        client.on('end', () => {
-            msg = {}
-            msg.payload = 'disconnected from ' + String(node.host) + ' on port ' + String(node.port)
-            node.send( [null, msg] );
-            this.status( {fill:"red",shape:"ring",text:"disconnected"} );
-        }); 
+                    if (receivebuffer.toString('utf8',0,delimiter_length) == header) {
+
+                        var receivebufferarray = receivebuffer.toString().split(node.delimiter);
+                        for(var j = 1; j < receivebufferarray.length;j++){
+                            try {
+                                var rcv_cmd = JSON.parse(receivebufferarray[j].substr(delimiter_length).toString());
+                                msg.payload.response = rcv_cmd;
+                                msg.payload.host = node.host
+                                msg.payload.port = node.port
+                                node.send( [null, msg] );
+
+                            } catch(err) {
+                                console.log(err);
+                            }
+                        }
+                    }
+
+                });
+
+                node.on('input', function(msg) {
+                    // expect a buffer
+                    const buff = msg.payload
+
+                    // setup return info
+                    ret = {}
+                    ret.payload = {}
+                    ret.payload.request = buff
+                    ret.payload.host = node.host
+                    ret.payload.port = node.port
+                    
+                    // return stuff accordingly
+                    client.write(buff);
+                    node.send( [ret, null] );
+
+                })
+
+
+        } catch(err) {
+            console.log("connection failed: " + err);
+        }
 
     }
 
